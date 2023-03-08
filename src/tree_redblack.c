@@ -7,11 +7,6 @@
 #include <stdint.h>
 
 
-/* 
- * if a function is lacking documentation within this file, 
- * refer to its declaration within tree.h.
-*/
-
 typedef struct treenode {
     struct treenode *parent;
     struct treenode *left;
@@ -74,12 +69,11 @@ void tree_destroy(tree_t *tree) {
     free(tree);
 }
 
-/* --------------------------------------------------------------
- * Insertion, searching, rotation
- * TODO: Deletion, maybe a Fast way to copy (without comparisons)
+/* ---------------Insertion, searching, rotation-----------------
+ * TODO: Deletion, tree copying
 */
 
-/* rotate counter-clockwise */
+/* rotate node counter-clockwise */
 static void rotate_left(tree_t *tree, treenode_t *a) {
     treenode_t *b = a->right;
     treenode_t *c = a->right->left;
@@ -101,7 +95,7 @@ static void rotate_left(tree_t *tree, treenode_t *a) {
     b->left = a;
 }
 
-/* rotate clockwise */
+/* rotate node clockwise */
 static void rotate_right(tree_t *tree, treenode_t *a) {
     treenode_t *b = a->left;
     treenode_t *c = a->left->right;
@@ -124,7 +118,6 @@ static void rotate_right(tree_t *tree, treenode_t *a) {
 }
 
 int8_t tree_contains(tree_t *tree, void *elem) {
-    /* iterative variant */
     treenode_t *curr = tree->root;
     int8_t direction;
 
@@ -264,9 +257,21 @@ void tree_remove(tree_t *tree, void *elem) {
     return;
 }
 
-/* --------------------------------------------------------------
- * Iteration
- * TODO: pre-order nxtfunc
+/* tree_t *tree_copy(tree_t *tree) {
+    tree_t *copy = malloc(sizeof(tree_t));
+
+    if (copy == NULL) {
+        ERROR_PRINT("out of memory\n");
+        return NULL;
+    }
+
+    // void *memcpy(void *dest, const void * src, size_t n)
+    memcpy(copy, tree, sizeof(tree_t));
+    return copy;
+} */
+
+/* -------------------------Iteration----------------------------
+ * TODO: pre-order iterator for nxtfunc
 */
 
 /* the type of 'next' function used by the iterator */
@@ -333,6 +338,7 @@ tree_iter_t *tree_createiter(tree_t *tree, int inOrder) {
     new_iter->tree = tree;
     new_iter->node = tree->root;
 
+    /* decide what nxtfunc to point to */
     if (inOrder) {
         new_iter->nxtfunc = next_node_inorder;
         return new_iter;
@@ -368,29 +374,20 @@ void *tree_next(tree_iter_t *iter) {
     return curr->elem;
 }
 
-/* tree_t *tree_copy(tree_t *tree) {
-    tree_t *copy = malloc(sizeof(tree_t));
 
-    if (copy == NULL) {
-        ERROR_PRINT("out of memory\n");
-        return NULL;
-    }
 
-    // void *memcpy(void *dest, const void * src, size_t n)
-    memcpy(copy, tree, sizeof(tree_t));
-    return copy;
-} */
+/* -------------------- end of active code --------------------*/
 
-/* --------------------------------------------------------------
- * 2) Alternative/unused function versions
- *
+
+
+/* ---------Alternative/unused function implementations----------
  * TODO: check which is faster for iterative vs recursive versions
  * and/or Unused functions
 */
 
 /* 
  * returns node that contains an equal elem, or NULL if none do
- * currently unused, intended for testing, but potentially also deletion 
+ * currently unused, intended for testing, could be useful for deletion..?
  */
 /* static treenode_t *node_contains(tree_t *tree, treenode_t *node, void *elem) {
     // triggers if item is not in tree
@@ -408,7 +405,7 @@ void *tree_next(tree_iter_t *iter) {
 
 /*
  * Recursive variant of node_add
-*/
+ */
 /* static int node_add(tree_t *tree, treenode_t *root, treenode_t *newNode) {
     // compare current nodes' and newNodes' elem to figure out where to go next
     const int direction = tree->cmpfunc(root->elem, newNode->elem);
@@ -439,8 +436,7 @@ void *tree_next(tree_iter_t *iter) {
 
 
 /* --------------------------------------------------------------
- * 3) Debugging & testing
- * 
+ * Debugging & testing
  * Everything below is functions for printing, testing and debugging.
  * While it usually makes sense to have tests in a different file, 
  * for trees i found it nescessary to have very detailed prints to follow
@@ -449,7 +445,7 @@ void *tree_next(tree_iter_t *iter) {
 */
 
 
-/* --- the following comment bracket wraps the entire test program --- */
+/* --- the following comment bracket wraps the entire test program --- */ /*
 
 
 #include "printing.h"
@@ -747,7 +743,7 @@ static void debug_iterate_partial(tree_iter_t *iter) {
 
 // calls debug_xxxx functions
 static void init_tests() {
-    /* tests assume LOG_LEVEL=0, ERROR_FATAL, @ printing.h */
+    // tests assume LOG_LEVEL=0, ERROR_FATAL, @ printing.h
     if (LEN % 2 == 1) ERROR_PRINT("use an even number.\n");
 
     // DEBUG_PRINT("creating array,  [ 0, %d > ...\n", LEN);
@@ -803,4 +799,4 @@ int main() {
     return 0;
 }
 
-/* <-- this comment wraps entire test program */
+*/ /* <-- this comment wraps entire test program */
