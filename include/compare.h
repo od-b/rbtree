@@ -23,7 +23,7 @@ int8_t compare_strings(void *a, void *b);
 int8_t compare_words(void *a, void *b);
 
 /*
- * int comparison
+ * integer comparison
 */
 int8_t compare_ints(void *a, void *b);
 

@@ -435,7 +435,7 @@ void *tree_next(tree_iter_t *iter) {
 
 
 
-/* --------------------------------------------------------------
+/* ---------------------Debugging & testing----------------------
  * Debugging & testing
  * Everything below is functions for printing, testing and debugging.
  * While it usually makes sense to have tests in a different file, 

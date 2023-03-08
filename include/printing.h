@@ -10,9 +10,9 @@
  * To control the amount of printing use the LOG_LEVEL constant in the Makefile.
  * The lower the log level, the higher the verbosity of the printing.
  * Defining -DERROR_FATAL in the Makefile will casue error prints to also exit the program.
- */
+*/
 
-//Regular text
+// Regular text
 #define BLK "\033[0;30m"
 #define RED "\033[0;31m"
 #define GRN "\033[0;32m"
@@ -22,7 +22,7 @@
 #define CYN "\033[0;36m"
 #define WHT "\033[0;37m"
 
-//Regular bold text
+// Regular bold text
 #define BBLK "\033[1;30m"
 #define BRED "\033[1;31m"
 #define BGRN "\033[1;32m"
@@ -32,7 +32,7 @@
 #define BCYN "\033[1;36m"
 #define BWHT "\033[1;37m"
 
-//Regular underline text
+// Regular underline text
 #define UBLK "\033[4;30m"
 #define URED "\033[4;31m"
 #define UGRN "\033[4;32m"
@@ -42,7 +42,7 @@
 #define UCYN "\033[4;36m"
 #define UWHT "\033[4;37m"
 
-//Regular background
+// Regular background
 #define BLKB "\033[40m"
 #define REDB "\033[41m"
 #define GRNB "\033[42m"
@@ -52,7 +52,7 @@
 #define CYNB "\033[46m"
 #define WHTB "\033[47m"
 
-//High intensty background 
+// High intensty background 
 #define BLKHB "\033[0;100m"
 #define REDHB "\033[0;101m"
 #define GRNHB "\033[0;102m"
@@ -62,7 +62,7 @@
 #define CYNHB "\033[0;106m"
 #define WHTHB "\033[0;107m"
 
-//High intensty text
+// High intensty text
 #define HBLK "\033[0;90m"
 #define HRED "\033[0;91m"
 #define HGRN "\033[0;92m"
@@ -72,7 +72,7 @@
 #define HCYN "\033[0;96m"
 #define HWHT "\033[0;97m"
 
-//Bold high intensity text
+// Bold high intensity text
 #define BHBLK "\033[1;90m"
 #define BHRED "\033[1;91m"
 #define BHGRN "\033[1;92m"
@@ -82,7 +82,7 @@
 #define BHCYN "\033[1;96m"
 #define BHWHT "\033[1;97m"
 
-//Reset
+// Reset
 #define reset "\033[0m"
 
 
