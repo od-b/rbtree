@@ -186,7 +186,6 @@ static void post_add_balance(tree_t *T, treenode_t *added_node) {
     curr = added_node;
 
     while (!(curr->parent->black)) {
-        // create pointers to parent, uncle and grandparent
         par = curr->parent;
         gp = par->parent;
 

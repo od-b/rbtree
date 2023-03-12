@@ -288,7 +288,6 @@ static void info_post_add_balance(tree_t *T, treenode_t *added_node) {
         n_loops++;
     }
 
-    T->size++;
     if (n_loops == 0) {
         printf("[no balancing needed] : ");
         p_node_int_inline(curr);
@@ -402,6 +401,7 @@ static treenode_t *node_contains(tree_t *tree, void *elem) {
  * replaces a node to be removed with its successor
  * returns a pointer to the successor node (tree->NIL if the tree is now empty)
  * does not free any memory
+ * this approach swaps pointers around instead of simply swapping elements
  */
 static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
     treenode_t *NIL, *par;
@@ -457,10 +457,13 @@ static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
 
         /* if successor is not right child of node */
         if (node->right != curr) {
+            if (curr->right != NIL) {
+                p_node_info("successor: ", curr);
+                ERROR_PRINT("successor has a right child\n");
+            }
             curr->parent->left = NIL;
             curr->right = node->right;
         } else {
-            // retain curr->right
             CASE_PRINT("successor is right child of node\n");
         }
 
@@ -469,10 +472,12 @@ static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
         } else {
             (node_is_leftchild) ? (par->left = curr) : (par->right = curr);
         }
-        
-        // inherit the nodes' relations
+
+        /* inherit the nodes' children */
         curr->parent = node->parent;
         curr->left = node->left;
+
+        /* fix parent pointers */
         if (curr->left != NIL) curr->left->parent = curr;
         if (curr->right != NIL) curr->right->parent = curr;
     }
@@ -483,6 +488,66 @@ static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
         return par->left;
     } else {
         return par->right;
+    }
+}
+
+// logically identical to post_remove_balance, but with lots of prints
+static void info_post_remove_balance(tree_t *T, treenode_t *succ) {
+    /* work in progress, mostly untested. Not working correctly */
+
+    int8_t sib_is_leftchild;
+    treenode_t *curr, *par, *sib, *NIL;
+
+    NIL = T->NIL;
+    curr = succ;
+
+    while (curr != T->root) {
+        par = curr->parent;
+        /* determine sibling by currents parent relation */
+        (par->left == curr) ? (sib = par->right) : (sib = par->left);
+
+        if (sib == NIL) {
+            curr = par;
+        } else if (sib->left->black && sib->right->black) {
+            /* sibling has two black children */
+            sib->black = 0;
+            curr = par;
+        } else {  /* ... sibling has at least one red child */
+            /* determine siblings' relation to their parent (what side) */
+            (par->left == curr) ? (sib_is_leftchild = 0) : (sib_is_leftchild = 1);
+
+            /* action determined by siblings color */
+            if (sib->black) {
+                if (!(sib->left->black)) {
+                    /* siblings left child is red -> rotate sibling away from the red child */
+                    if (sib_is_leftchild) {
+                        sib->left->black = 1;
+                        sib->black = par->black;
+                        rotate_left(T, par);
+                    } else { 
+                        sib->left->black = par->black;
+                        rotate_right(T, sib);
+                        rotate_left(T, par);
+                    }
+                } else { 
+                    /* siblings right child is red -> rotate sibling away from the red child */
+                    if (!sib_is_leftchild) {
+                        sib->right->black = 1;
+                        sib->black = par->black;
+                        rotate_left(T, par);
+                    } else {
+                        sib->right->black = par->black;
+                        rotate_left(T, sib);
+                        rotate_right(T, par);
+                    }
+                }
+                par->black = 1;
+            } else {  /* ... sibling is red */
+                par->black = 0;
+                sib->black = 1;
+                (sib_is_leftchild) ? (rotate_right(T, par)) : (rotate_left(T, par));
+            }
+        }
     }
 }
 
@@ -500,36 +565,67 @@ void info_tree_remove(tree_t *tree, void *elem) {
     treenode_t *succ = node_replace(tree, node);
     p_node_relation(node, "successor", succ);
 
-    /* free the node with the item */
-    free(node);
-    tree->size--;
-
     /* if tree is empty, don't try to balance it */
     // could also check for succ == NIL for same test
-    if (tree->size == 0) return;
+    if (tree->size == 0) {
+        DEBUG_PRINT("tree is now empty\n");
+        return;
+    }
 
-    print_2D(tree, "post removal:");
+    print_2D(tree, "post removal, pre balancing:");
+
+    /* verify successors' parent relation */
     p_node_relation(succ, "parent", succ->parent);
+    if (succ == tree->root) {
+        CASE_PRINT("successor is now root\n");
+        if (succ->parent != tree->NIL) {
+            ERROR_PRINT("tree root should have NIL as parent\n");
+        }
+    } else if (succ->parent->right == succ) {
+        p_node_info("succ->parent->right", succ->parent->right);
+    } else if (succ->parent->left == succ) {
+        p_node_info("succ->parent->left", succ->parent->left);
+    } else {
+        ERROR_PRINT("succesor parent is not correctly updated\n");
+    }
+
+    /* verify succesful adoption of children */
     p_node_relation(succ, "left", succ->left);
     if ((succ->left != tree->NIL) && (succ->left->parent != succ)) {
-        p_node_info("succ->left->par", succ->left->parent);
+        p_node_info("succ->left->parent", succ->left->parent);
         ERROR_PRINT("parent link broken\n");
     }
     p_node_relation(succ, "right", succ->right);
     if ((succ->right != tree->NIL) && (succ->right->parent != succ)) {
-        p_node_info("succ->right->par", succ->right->parent);
+        p_node_info("succ->right->parent", succ->right->parent);
         ERROR_PRINT("parent link broken\n");
     }
     printf("\n");
 
     /* balancing / recoloring */
+
+    // if ((!node->black || !succ->black)) {
+    //     CASE_PRINT("1) (node OR succ is red) OR (succ is root) -> color succ red\n");
+    //     succ->black = 1;
+    // }
+    // if (succ == tree->root) {
+    //     succ->black = 1;
+    // }
+    info_post_remove_balance(tree, succ);
+    /* free the node with the item */
+
+    print_2D(tree, "post removal & balancing:");
+    free(node);
+    tree->size--;
 }
 
 static void debug_remove(tree_t *tree) {
-    int to_remove = 5;
+    int to_remove = 7;
     void *elem = &to_remove;
     info_tree_remove(tree, elem);
-    to_remove = 1;
+    to_remove = 3;
+    info_tree_remove(tree, elem);
+    to_remove = 4;
     info_tree_remove(tree, elem);
 }
 
