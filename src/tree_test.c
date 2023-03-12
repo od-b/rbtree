@@ -83,25 +83,19 @@ static void rotate_right(tree_t *tree, treenode_t *a) {
 
 static treenode_t *node_add(tree_t *tree, void *elem) {
     treenode_t *curr = tree->root;
+    treenode_t *new_node = NULL;
     int8_t direction;
 
     /* traverse until a NIL-node, or node with equal element is found */
     while ((direction = tree->cmpfunc(elem, curr->elem)) != 0) {
         if (direction > 0) {
             if (curr->right == tree->NIL) {
-                treenode_t *newNode = malloc(sizeof(treenode_t));
-                if (newNode == NULL) {
-                    printf("out of memory\n");
-                    return NULL;
+                new_node = malloc(sizeof(treenode_t));
+                if (new_node != NULL) {
+                    new_node->parent = curr;
+                    curr->right = new_node;
                 }
-                newNode->elem = elem;
-                newNode->left = tree->NIL;
-                newNode->right = tree->NIL;
-                newNode->black = 0;
-                newNode->parent = curr;
-                curr->right = newNode;
-                // return the newly created node
-                return newNode;
+                return new_node;
             }
             // else ... move right in tree
             curr = curr->right;
@@ -109,27 +103,20 @@ static treenode_t *node_add(tree_t *tree, void *elem) {
             // ... direction < 0
             if (curr->left == tree->NIL) {
                 // same as above, but curr->left
-                treenode_t *newNode = malloc(sizeof(treenode_t));
-                if (newNode == NULL) {
-                    printf("out of memory\n");
-                    return NULL;
+                new_node = malloc(sizeof(treenode_t));
+                if (new_node != NULL) {
+                    new_node->parent = curr;
+                    curr->left = new_node;
                 }
-                newNode->elem = elem;
-                newNode->left = tree->NIL;
-                newNode->right = tree->NIL;
-                newNode->black = 0;
-                newNode->parent = curr;
-                curr->left = newNode;
-                return newNode;
+                return new_node;
             }
             // else ... move left in tree
             curr = curr->left;
         }
     }
     // tree has an item with the same value, don't add it
-    return NULL;
+    return tree->NIL;
 }
-
 
 /* ---------------------Debugging & testing----------------------
  * LEN =  nums to be added to the tree (in ascending order [0, LEN>)
@@ -140,7 +127,7 @@ static treenode_t *node_add(tree_t *tree, void *elem) {
 
 #define LEN  10
 #define MAX_PRINT  42
-#define PRINT_TREE_2D  0
+#define PRINT_TREE_2D  1
 
 // misc implementation helper functions for QoL / readability
 static int is_left_child(treenode_t *node) { if (node->parent->left == node) return 1; return 0; }
@@ -148,7 +135,6 @@ static void color_red(treenode_t *node) { node->black = 0; }
 static void color_black(treenode_t *node) { node->black = 1; }
 static int is_red(treenode_t *node) { if (node->black) return 0; return 1; }
 static void debug_print_pass(char *msg) { fprintf(stderr, HGRN "[PASS]" reset " => %s", msg); }
-
 
 // print node->elem as an integer
 static void p_node_int(treenode_t *node) {
@@ -191,6 +177,7 @@ static void p_node_info(char *descr, treenode_t *node) {
     p_node_int(node);
 }
 
+// print: <a->elem> <'->'descr> <b->elem'\n'>
 static void p_node_relation(treenode_t *a, char *descr, treenode_t *b) {
     p_node_int_inline(a);
     printf("->%-9s : ", descr);
@@ -222,31 +209,13 @@ static void print_2D(tree_t *tree, char *title) {
     }
 }
 
-// tree add with step by step printing as coloring / rotations / cases occur
-static void print_tree_add(tree_t *T, void *elem) {
-    // if root is not added, do so and return
-    if (T->size == 0) {
-        treenode_t *newNode = malloc(sizeof(treenode_t));
-        newNode->elem = elem;
-        newNode->left = T->NIL;
-        newNode->right = T->NIL;
-        newNode->parent = T->NIL;
-        newNode->black = 1;
-        T->root = newNode;
-        T->size = 1;
-        return;
-    }
-
-    // add to the tree
-    treenode_t *curr = node_add(T, elem);
-    if (curr == NULL) {
-        // element was duplicate, avoid adding and return
-        return;
-    }
-    print_2D(T, "node_add finished");
-    treenode_t *tmp = curr;
-    treenode_t *par, *unc, *gp;
+// logically identical to post_add_balance, but with lots of prints
+static void debug_post_add_balance(tree_t *T, treenode_t *added_node) {
+    treenode_t *curr, *par, *unc, *gp, *tmp;
+    curr = added_node;
+    tmp = curr;
     int n_loops = 0;
+
     // parent being red triggers the balancing
     while (is_red(curr->parent)) {
         if (curr != tmp) {
@@ -329,7 +298,52 @@ static void print_tree_add(tree_t *T, void *elem) {
     printf("\n");
 }
 
-// checks that sentinel (tree->NIL) is as it should
+// identical to the one in tree_redblack except for last line
+static void print_tree_add(tree_t *T, void *elem) {
+    /* case: tree does not have a root yet */
+    if (T->size == 0) {
+        treenode_t *root = malloc(sizeof(treenode_t));
+        if (root == NULL) {
+            ERROR_PRINT("out of memory\n");
+            return;
+        }
+        root->elem = elem;
+        root->left = T->NIL;
+        root->right = T->NIL;
+        root->parent = T->NIL;
+        root->black = 1;
+        T->root = root;
+        T->size = 1;
+        p_node_info("added root: ", root);
+        return;
+    }
+
+    /* add elem to the tree */
+    treenode_t *new_node = node_add(T, elem);
+    if (new_node == T->NIL) {
+        /* avoid adding duplicate */
+        return;
+    }
+    if (new_node == NULL) {
+        /* only occurs if malloc failed */
+        ERROR_PRINT("out of memory\n");
+        return;
+    }
+
+    /* ... else, the elem was added, increment tree size */
+    T->size++;
+
+    /* assign the default values for new nodes */
+    new_node->elem = elem;
+    new_node->left = T->NIL;
+    new_node->right = T->NIL;
+    new_node->black = 0;
+
+    /* call for balancing */
+    debug_post_add_balance(T, new_node);
+}
+
+// checks that sentinel (tree->NIL) is unchanged by rotations/coloring
 static void check_sentinel_ok(tree_t *tree) {
     int sentinel_ok = 1;
     if (tree->NIL->right != NULL) {
@@ -623,7 +637,7 @@ static void debug_remove(tree_t *tree) {
 }
 
 // calls debug_xxxx functions
-static void init_tests() {
+int main() {
     if (LEN % 2 == 1) ERROR_PRINT("use an even number.\n");
 
     printf("> creating array to store node values,  [ 0, %d > ...\n", LEN);
@@ -674,9 +688,5 @@ static void init_tests() {
     tree_destroy(tree);
 
     printf("\n\t :^) HOORAY NO SEGFAULT :^)\n");
-}
-
-int main() {
-    init_tests();
     return 0;
 }

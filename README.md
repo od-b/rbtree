@@ -7,12 +7,12 @@ Any changes to the functions:
 To compile the test program, run *make tree*  
 
 ### Author(s)
-#### All code, unless specifically mentioned below
+#### All code, unless specifically mentioned below:
 [github](https://github.com/od-b)  
 [email](od.bjerke@gmail.com)  
 
-#### printing.h
+#### printing.h:
 Morten Grønnesby <morten.gronnesby@uit.no>  
 
-#### print_2D @ tree_test.c
+#### print_2D @ tree_test.c:
 <https://www.geeksforgeeks.org/print-binary-tree-2-dimensions/>  
