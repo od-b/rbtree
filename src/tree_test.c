@@ -37,7 +37,7 @@ typedef struct tree_iter {
 } tree_iter_t;
 
 
-/* ----copies of some internal functions for print_tree_add()---- */
+/* ----copies of some internal functions for info_tree_add()---- */
 
 static void rotate_left(tree_t *tree, treenode_t *a) {
     treenode_t *b = a->right;
@@ -212,7 +212,7 @@ static void print_2D(tree_t *tree, char *title) {
 }
 
 // logically identical to post_add_balance, but with lots of prints
-static void debug_post_add_balance(tree_t *T, treenode_t *added_node) {
+static void info_post_add_balance(tree_t *T, treenode_t *added_node) {
     treenode_t *curr, *par, *unc, *gp, *tmp;
     curr = added_node;
     tmp = curr;
@@ -301,7 +301,7 @@ static void debug_post_add_balance(tree_t *T, treenode_t *added_node) {
 }
 
 // identical to the one in tree_redblack except for last line
-static void print_tree_add(tree_t *T, void *elem) {
+static void info_tree_add(tree_t *T, void *elem) {
     /* case: tree does not have a root yet */
     if (T->size == 0) {
         treenode_t *root = malloc(sizeof(treenode_t));
@@ -342,7 +342,7 @@ static void print_tree_add(tree_t *T, void *elem) {
     new_node->black = 0;
 
     /* call for balancing */
-    debug_post_add_balance(T, new_node);
+    info_post_add_balance(T, new_node);
 }
 
 // checks that sentinel (tree->NIL) is unchanged by rotations/coloring
@@ -473,8 +473,8 @@ static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
         // inherit the nodes' relations
         curr->parent = node->parent;
         curr->left = node->left;
-        curr->left->parent = curr;
-        curr->right->parent = curr;
+        if (curr->left != NIL) curr->left->parent = curr;
+        if (curr->right != NIL) curr->right->parent = curr;
     }
 
     if (node_is_root) {
@@ -486,13 +486,15 @@ static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
     }
 }
 
-void tree_remove(tree_t *tree, void *elem) {
+void info_tree_remove(tree_t *tree, void *elem) {
     printf("\nattempting to remove node with '%d'\n", *(int*)elem);
     treenode_t *node = node_contains(tree, elem);
     if (node == NULL) {
         DEBUG_PRINT("elem is not in the tree\n");
         return;
     }
+
+    print_2D(tree, "pre removal");
 
     /* replace node with its successor */
     treenode_t *succ = node_replace(tree, node);
@@ -506,23 +508,29 @@ void tree_remove(tree_t *tree, void *elem) {
     // could also check for succ == NIL for same test
     if (tree->size == 0) return;
 
+    print_2D(tree, "post removal:");
     p_node_relation(succ, "parent", succ->parent);
     p_node_relation(succ, "left", succ->left);
+    if ((succ->left != tree->NIL) && (succ->left->parent != succ)) {
+        p_node_info("succ->left->par", succ->left->parent);
+        ERROR_PRINT("parent link broken\n");
+    }
     p_node_relation(succ, "right", succ->right);
+    if ((succ->right != tree->NIL) && (succ->right->parent != succ)) {
+        p_node_info("succ->right->par", succ->right->parent);
+        ERROR_PRINT("parent link broken\n");
+    }
+    printf("\n");
 
     /* balancing / recoloring */
 }
 
-
 static void debug_remove(tree_t *tree) {
-    print_2D(tree, "pre removal");
-    int to_remove = 7;
+    int to_remove = 5;
     void *elem = &to_remove;
-    tree_remove(tree, elem);
-    print_2D(tree, "post removal");
-    to_remove = 8;
-    tree_remove(tree, elem);
-    print_2D(tree, "post removal");
+    info_tree_remove(tree, elem);
+    to_remove = 1;
+    info_tree_remove(tree, elem);
 }
 
 static void debug_add(tree_t *tree, int *nums) {
@@ -534,7 +542,7 @@ static void debug_add(tree_t *tree, int *nums) {
         
         void *elem = &nums[i];
         if (LEN < MAX_PRINT)
-            print_tree_add(tree, elem);
+            info_tree_add(tree, elem);
         else
             tree_add(tree, elem);
     }
