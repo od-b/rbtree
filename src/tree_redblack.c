@@ -253,8 +253,136 @@ void tree_add(tree_t *T, void *elem) {
     }
 }
 
+/* 
+ * returns node that contains an equal elem, or NULL if none do
+ */
+static treenode_t *node_contains(tree_t *tree, void *elem) {
+    /* WORK IN PROGRESS */
+
+    treenode_t *curr = tree->root;
+    int8_t direction;
+
+    /* traverse until a NIL-node, or node with equal element is found */
+    while (curr != tree->NIL) {
+        direction = tree->cmpfunc(elem, curr->elem);
+        if (direction > 0) {
+            // move right
+            curr = curr->right;
+        } else if (direction < 0) {
+            // move left
+            curr = curr->left;
+        } else {
+            // node found
+            return curr;
+        }
+    }
+    // no nodes contain the elem
+    return NULL;
+}
+
+static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
+    /* WORK IN PROGRESS */
+
+    treenode_t *NIL, *par;
+    int node_is_leftchild, node_is_root;
+
+    NIL = tree->NIL;
+    par = node->parent;
+
+    if (node == tree->root) {
+        node_is_root = 1;
+    } else {
+        node_is_root = 0;
+        // determine parent relation
+        (par->left == node) ? (node_is_leftchild = 1) : (node_is_leftchild = 0);
+    }
+
+    /* if node does not have two children */
+    if ((node->left == NIL) || (node->right == NIL)) {
+        if ((node->left == NIL) && (node->right == NIL)) {
+            /* node has no children */
+            if (node_is_root) {
+                tree->root = NIL;
+            } else {
+                (node_is_leftchild) ? (par->left = NIL) : (par->right = NIL);
+            }
+        }
+        /* node has only one child, replace the node with its child */
+        else if (node->left == NIL) {
+            /* replace node with its right child */
+            if (node_is_root) {
+                tree->root = node->right;
+            } else {
+                (node_is_leftchild) ? (par->left = node->right) : (par->right = node->right);
+            }
+            node->right->parent = par;
+        }
+        else {  /* ... (node->right == NIL) */
+            /* replace node with its left child */
+            if (node_is_root) {
+                tree->root = node->left;
+            } else {
+                (node_is_leftchild) ? (par->left = node->left) : (par->right = node->left);
+            }
+            node->left->parent = par;
+        }
+    }
+
+    else { /* ... node has two children */
+        /* replace node with its inorder successor, i.e., the left-most node in the right subtree */
+        treenode_t *curr = node->right;
+        while (curr->left != NIL) {
+            curr = curr->left;
+        }
+        // un-link successors parent
+        curr->parent->left = NIL;
+        if (curr->right != NIL) ERROR_PRINT("case here\n");
+
+        if (node_is_root) {
+            tree->root = curr;
+        } else {
+            (node_is_leftchild) ? (par->left = curr) : (par->right = curr);
+        }
+        
+        // inherit the nodes' relations
+        curr->parent = node->parent;
+        curr->left = node->left;
+        curr->right = node->right;
+        curr->left->parent = curr;
+        curr->right->parent = curr;
+    }
+
+    if (node_is_root) {
+        return tree->root;
+    } else if (node_is_leftchild) {
+        return par->left;
+    } else {
+        return par->right;
+    }
+}
+
+
 void tree_remove(tree_t *tree, void *elem) {
-    return;
+    /* WORK IN PROGRESS */
+
+    treenode_t *node = node_contains(tree, elem);
+    if (node == NULL) {
+        ERROR_PRINT("elem is not in the tree");
+        return;
+    }
+
+    /* replace node with its successor */
+    treenode_t *succ = node_replace(tree, node);
+
+    /* free the node with the item */
+    free(node);
+    tree->size--;
+
+    /* if tree is empty, don't try to balance it */
+    // could also check for succ == NIL for same test
+    if (tree->size == 0) return;
+
+    /* balancing, recoloring */
 }
 
 /* tree_t *tree_copy(tree_t *tree) {
@@ -385,24 +513,6 @@ void *tree_next(tree_iter_t *iter) {
  * and/or Unused functions
 */
 
-/* 
- * returns node that contains an equal elem, or NULL if none do
- * currently unused, intended for testing, could be useful for deletion..?
- */
-/* static treenode_t *node_contains(tree_t *tree, treenode_t *node, void *elem) {
-    // triggers if item is not in tree
-    if (node == tree->NIL) return NULL;
-    const int direction = tree->cmpfunc(node->elem, elem);
-
-    if (direction > 0) {
-        return node_contains(tree, node->right, elem);
-    } else if (direction < 0) {
-        return node_contains(tree, node->left, elem);
-    } else {
-        return node;
-    }
-} */
-
 /*
  * Recursive variant of node_add
  */
@@ -445,7 +555,7 @@ void *tree_next(tree_iter_t *iter) {
 */
 
 
-/* --- the following comment bracket wraps the entire test program --- */ /*
+/* --- the following comment bracket wraps the entire test program --- */ 
 
 
 #include "printing.h"
@@ -799,4 +909,4 @@ int main() {
     return 0;
 }
 
-*/ /* <-- this comment wraps entire test program */
+/* <-- this comment wraps entire test program */
