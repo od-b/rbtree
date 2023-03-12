@@ -69,6 +69,7 @@ void tree_destroy(tree_t *tree) {
     free(tree);
 }
 
+
 /* ---------------Insertion, searching, rotation-----------------
  * TODO: Deletion, tree copying
 */
@@ -267,6 +268,7 @@ void tree_add(tree_t *T, void *elem) {
         post_add_balance(T, new_node);
     }
 }
+
 
 /* -------------------------Iteration----------------------------
  * TODO: pre-order iterator for nxtfunc

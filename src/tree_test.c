@@ -7,7 +7,7 @@
 #include <stdint.h>
 
 /* -------------------Includes & Definitions---------------------
- * actual program starts at Debugging & testing
+ * actual program starts at 'Debugging & testing'
 */
 
 typedef struct treenode {
@@ -37,7 +37,7 @@ typedef struct tree_iter {
 } tree_iter_t;
 
 
-/* copies of some internal functions for print_tree_add() */
+/* ----copies of some internal functions for print_tree_add()---- */
 
 static void rotate_left(tree_t *tree, treenode_t *a) {
     treenode_t *b = a->right;
@@ -118,6 +118,7 @@ static treenode_t *node_add(tree_t *tree, void *elem) {
     return tree->NIL;
 }
 
+
 /* ---------------------Debugging & testing----------------------
  * LEN =  nums to be added to the tree (in ascending order [0, LEN>)
  * MAX_PRINT = when to stop detailed rotation printing
@@ -154,6 +155,7 @@ static void p_node_int(treenode_t *node) {
     }
 }
 
+// print node->elem as an integer, without newline
 static void p_node_int_inline(treenode_t *node) {
     if (node == NULL) {
         printf("NULL");
@@ -373,6 +375,156 @@ static void check_sentinel_ok(tree_t *tree) {
     else ERROR_PRINT("Sentinel is mutated :(\n");
 }
 
+/* returns node that contains an equal elem, or NULL if none do */
+static treenode_t *node_contains(tree_t *tree, void *elem) {
+    treenode_t *curr = tree->root;
+    int8_t direction;
+
+    /* traverse until a NIL-node, or node with equal element is found */
+    while (curr != tree->NIL) {
+        direction = tree->cmpfunc(elem, curr->elem);
+        if (direction > 0) {
+            // move right
+            curr = curr->right;
+        } else if (direction < 0) {
+            // move left
+            curr = curr->left;
+        } else {
+            // node found
+            return curr;
+        }
+    }
+    // no nodes contain the elem
+    return NULL;
+}
+
+/* 
+ * replaces a node to be removed with its successor
+ * returns a pointer to the successor node (tree->NIL if the tree is now empty)
+ * does not free any memory
+ */
+static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
+    treenode_t *NIL, *par;
+    int node_is_leftchild, node_is_root;
+
+    NIL = tree->NIL;
+    par = node->parent;
+
+    if (node == tree->root) {
+        node_is_root = 1;
+    } else {
+        node_is_root = 0;
+        // determine parent relation
+        (par->left == node) ? (node_is_leftchild = 1) : (node_is_leftchild = 0);
+    }
+
+    /* if node does not have two children */
+    if ((node->left == NIL) || (node->right == NIL)) {
+        if ((node->left == NIL) && (node->right == NIL)) {
+            /* node has no children */
+            if (node_is_root) {
+                tree->root = NIL;
+            } else {
+                (node_is_leftchild) ? (par->left = NIL) : (par->right = NIL);
+            }
+        }
+        /* node has only one child, replace the node with its child */
+        else if (node->left == NIL) {
+            /* replace node with its right child */
+            if (node_is_root) {
+                tree->root = node->right;
+            } else {
+                (node_is_leftchild) ? (par->left = node->right) : (par->right = node->right);
+            }
+            node->right->parent = par;
+        }
+        else {  /* ... (node->right == NIL) */
+            /* replace node with its left child */
+            if (node_is_root) {
+                tree->root = node->left;
+            } else {
+                (node_is_leftchild) ? (par->left = node->left) : (par->right = node->left);
+            }
+            node->left->parent = par;
+        }
+    }
+    else { /* ... node has two children */
+        /* replace node with its inorder successor, i.e., the left-most node in the right subtree */
+        treenode_t *curr = node->right;
+        while (curr->left != NIL) {
+            curr = curr->left;
+        }
+
+        /* if successor is not right child of node */
+        if (node->right != curr) {
+            curr->parent->left = NIL;
+            curr->right = node->right;
+        } else {
+            // retain curr->right
+            CASE_PRINT("successor is right child of node\n");
+        }
+
+        if (node_is_root) {
+            tree->root = curr;
+        } else {
+            (node_is_leftchild) ? (par->left = curr) : (par->right = curr);
+        }
+        
+        // inherit the nodes' relations
+        curr->parent = node->parent;
+        curr->left = node->left;
+        curr->left->parent = curr;
+        curr->right->parent = curr;
+    }
+
+    if (node_is_root) {
+        return tree->root;
+    } else if (node_is_leftchild) {
+        return par->left;
+    } else {
+        return par->right;
+    }
+}
+
+void tree_remove(tree_t *tree, void *elem) {
+    printf("\nattempting to remove node with '%d'\n", *(int*)elem);
+    treenode_t *node = node_contains(tree, elem);
+    if (node == NULL) {
+        DEBUG_PRINT("elem is not in the tree\n");
+        return;
+    }
+
+    /* replace node with its successor */
+    treenode_t *succ = node_replace(tree, node);
+    p_node_relation(node, "successor", succ);
+
+    /* free the node with the item */
+    free(node);
+    tree->size--;
+
+    /* if tree is empty, don't try to balance it */
+    // could also check for succ == NIL for same test
+    if (tree->size == 0) return;
+
+    p_node_relation(succ, "parent", succ->parent);
+    p_node_relation(succ, "left", succ->left);
+    p_node_relation(succ, "right", succ->right);
+
+    /* balancing / recoloring */
+}
+
+
+static void debug_remove(tree_t *tree) {
+    print_2D(tree, "pre removal");
+    int to_remove = 7;
+    void *elem = &to_remove;
+    tree_remove(tree, elem);
+    print_2D(tree, "post removal");
+    to_remove = 8;
+    tree_remove(tree, elem);
+    print_2D(tree, "post removal");
+}
+
 static void debug_add(tree_t *tree, int *nums) {
     for (int i = 0; i < LEN; i++) {
         if (i == 0)
@@ -485,157 +637,6 @@ static void debug_iterate_partial(tree_iter_t *iter) {
     debug_print_pass("iterator works like expected\n");
 }
 
-/* 
- * returns node that contains an equal elem, or NULL if none do
- */
-static treenode_t *node_contains(tree_t *tree, void *elem) {
-    treenode_t *curr = tree->root;
-    int8_t direction;
-
-    /* traverse until a NIL-node, or node with equal element is found */
-    while (curr != tree->NIL) {
-        direction = tree->cmpfunc(elem, curr->elem);
-        if (direction > 0) {
-            // move right
-            curr = curr->right;
-        } else if (direction < 0) {
-            // move left
-            curr = curr->left;
-        } else {
-            // node found
-            return curr;
-        }
-    }
-    // no nodes contain the elem
-    return NULL;
-}
-
-/* 
- * replaces a node to be removed with its successor
- * returns a pointer to the successor node (tree->NIL if the tree is now empty)
- */
-static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
-    treenode_t *NIL, *par;
-    int node_is_leftchild, node_is_root;
-
-    NIL = tree->NIL;
-    par = node->parent;
-
-    if (node == tree->root) {
-        node_is_root = 1;
-    } else {
-        node_is_root = 0;
-        // determine parent relation
-        (par->left == node) ? (node_is_leftchild = 1) : (node_is_leftchild = 0);
-    }
-
-    /* if node does not have two children */
-    if ((node->left == NIL) || (node->right == NIL)) {
-        if ((node->left == NIL) && (node->right == NIL)) {
-            /* node has no children */
-            if (node_is_root) {
-                tree->root = NIL;
-            } else {
-                (node_is_leftchild) ? (par->left = NIL) : (par->right = NIL);
-            }
-        }
-        /* node has only one child, replace the node with its child */
-        else if (node->left == NIL) {
-            /* replace node with its right child */
-            if (node_is_root) {
-                tree->root = node->right;
-            } else {
-                (node_is_leftchild) ? (par->left = node->right) : (par->right = node->right);
-            }
-            node->right->parent = par;
-        }
-        else {  /* ... (node->right == NIL) */
-            /* replace node with its left child */
-            if (node_is_root) {
-                tree->root = node->left;
-            } else {
-                (node_is_leftchild) ? (par->left = node->left) : (par->right = node->left);
-            }
-            node->left->parent = par;
-        }
-    }
-    else { /* ... node has two children */
-        /* replace node with its inorder successor, i.e., the left-most node in the right subtree */
-        treenode_t *curr = node->right;
-        while (curr->left != NIL) {
-            curr = curr->left;
-        }
-
-        /* if successor is not right child of node */
-        if (node->right != curr) {
-            curr->parent->left = NIL;
-            curr->right = node->right;
-        } else {
-            // retain curr->right
-            CASE_PRINT("successor is right child of node\n");
-        }
-
-
-        if (node_is_root) {
-            tree->root = curr;
-        } else {
-            (node_is_leftchild) ? (par->left = curr) : (par->right = curr);
-        }
-        
-        // inherit the nodes' relations
-        curr->parent = node->parent;
-        curr->left = node->left;
-        curr->left->parent = curr;
-        curr->right->parent = curr;
-    }
-
-    if (node_is_root) {
-        return tree->root;
-    } else if (node_is_leftchild) {
-        return par->left;
-    } else {
-        return par->right;
-    }
-}
-
-void tree_remove(tree_t *tree, void *elem) {
-    printf("\nattempting to remove node with '%d'\n", *(int*)elem);
-    treenode_t *node = node_contains(tree, elem);
-    if (node == NULL) {
-        DEBUG_PRINT("elem is not in the tree\n");
-        return;
-    }
-
-    /* replace node with its successor */
-    treenode_t *succ = node_replace(tree, node);
-    p_node_relation(node, "successor", succ);
-
-    /* free the node with the item */
-    free(node);
-    tree->size--;
-
-    /* if tree is empty, don't try to balance it */
-    // could also check for succ == NIL for same test
-    if (tree->size == 0) return;
-
-    p_node_relation(succ, "parent", succ->parent);
-    p_node_relation(succ, "left", succ->left);
-    p_node_relation(succ, "right", succ->right);
-
-    /* balancing / recoloring */
-}
-
-static void debug_remove(tree_t *tree) {
-    print_2D(tree, "pre removal");
-    int to_remove = 7;
-    void *elem = &to_remove;
-    tree_remove(tree, elem);
-    print_2D(tree, "post removal");
-    to_remove = 8;
-    tree_remove(tree, elem);
-    print_2D(tree, "post removal");
-}
-
 // calls debug_xxxx functions
 int main() {
     if (LEN % 2 == 1) ERROR_PRINT("use an even number.\n");
@@ -683,6 +684,9 @@ int main() {
 
     TEST_PRINT("testing tree_remove...\n");
     debug_remove(tree);
+
+    TEST_PRINT("checking sentinel status...\n");
+    check_sentinel_ok(tree);
 
     printf("> destroying tree...\n");
     tree_destroy(tree);
