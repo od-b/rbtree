@@ -1,0 +1,34 @@
+/* ---------Alternative/unused function implementations----------
+ * TODO: check which is faster for iterative vs recursive versions
+ * and/or Unused functions
+*/
+
+/*
+ * Recursive variant of node_add
+ */
+/* static int node_add(tree_t *tree, treenode_t *root, treenode_t *newNode) {
+    // compare current nodes' and newNodes' elem to figure out where to go next
+    const int direction = tree->cmpfunc(root->elem, newNode->elem);
+    switch (direction) {
+        case (NONE):
+            // tree already contains elem, return
+            return 0;
+        case (RIGHT):
+            if (root->right == tree->NIL) {
+                newNode->parent = root;
+                root->right = newNode;
+                return 1;
+            }
+            return node_add(tree, root->right, newNode);
+        case (LEFT):
+            if (root->left == tree->NIL) {
+                newNode->parent = root;
+                root->left = newNode;
+                return 1;
+            }
+            return node_add(tree, root->left, newNode);
+        default:
+            ERROR_PRINT("cmpfunc should only ever return 0, 1 or -1\n");
+            return 0;
+    }
+} */

@@ -85,13 +85,12 @@
 // Reset
 #define reset "\033[0m"
 
-
 /*
  * Prints an info message to stdout.
  * Use this to print information that should be redirected.
  */
 #if LOG_LEVEL <= 0
-#define INFO_PRINT(...) do { fprintf(stderr, "%s", BGRN); fprintf(stderr, "[INFO][%s:%d]: ", __FILE__, __LINE__); fprintf(stderr, "%s", reset); fprintf(stdout, __VA_ARGS__); } while(0)
+#define INFO_PRINT(...) do { fprintf(stderr, "%s", BGRN); fprintf(stderr, "[%s:%d]: ", __FILE__, __LINE__); fprintf(stderr, "%s", reset); fprintf(stdout, __VA_ARGS__); } while(0)
 #else
 #define INFO_PRINT(...) do { } while(0)
 #endif
@@ -102,8 +101,10 @@
  */
 #if LOG_LEVEL <= 1
 #define DEBUG_PRINT(...) do { fprintf(stderr, "%s", BYEL); fprintf(stderr, "[DEBUG][%s:%d]: ", __FILE__, __LINE__); fprintf(stderr, "%s", reset); fprintf(stderr, __VA_ARGS__); } while(0)
+#define CASE_PRINT(...) do { fprintf(stderr, "%s", UYEL); fprintf(stderr, "[CASE][%s:%d]: ", __FILE__, __LINE__); fprintf(stderr, "%s", reset); fprintf(stderr, __VA_ARGS__); } while(0)
 #else
 #define DEBUG_PRINT(...) do { } while(0)
+#define CASE_PRINT(...) do { } while(0)
 #endif
 
 /*
@@ -120,7 +121,6 @@
 #else
 #define ERROR_PRINT(...) do { } while(0)
 #endif
-
 
 #define TEST_PRINT(...) do { fprintf(stderr, "%s", BCYN); fprintf(stderr, "[TEST]: "); fprintf(stderr, __VA_ARGS__); fprintf(stderr, "%s", reset);} while(0)
 
