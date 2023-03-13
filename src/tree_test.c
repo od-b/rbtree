@@ -403,11 +403,9 @@ static treenode_t *node_contains(tree_t *tree, void *elem) {
  * updates the tree size, but does not free any memory
  */
 static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
-    treenode_t *NIL, *par;
-    int node_is_leftchild, node_is_root;
-
-    NIL = tree->NIL;
-    par = node->parent;
+    int8_t node_is_leftchild, node_is_root;
+    treenode_t *NIL = tree->NIL;
+    treenode_t *par = node->parent;
 
     if (node == tree->root) {
         node_is_root = 1;
@@ -448,7 +446,9 @@ static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
         }
     }
     else { /* ... node has two children */
-        /* replace node with its inorder successor, i.e., the left-most node in the right subtree */
+        /* replace node with its inorder successor, 
+         * i.e., the left-most node in the right subtree */
+
         treenode_t *curr = node->right;
         while (curr->left != NIL) {
             curr = curr->left;
@@ -482,6 +482,7 @@ static treenode_t *node_replace(tree_t *tree, treenode_t *node) {
     }
 
     tree->size--;
+
     if (node_is_root) {
         return tree->root;
     } else if (node_is_leftchild) {
@@ -505,6 +506,12 @@ static void info_post_remove_balance(tree_t *T, treenode_t *succ) {
      3) NIL-nodes are black, root is black
      4) Every path from root --> NIL has the same black node count
     */
+
+    /* if node or succ is red:
+     * color succ red
+     * color succ's children black
+    */
+    
 
     while (curr != T->root) {
         par = curr->parent;
@@ -569,35 +576,9 @@ static void info_post_remove_balance(tree_t *T, treenode_t *succ) {
     }
 }
 
-void info_tree_remove(tree_t *tree, void *elem) {
-    printf("\nattempting to find node with elem '%d'\n", *(int*)elem);
-    treenode_t *node = node_contains(tree, elem);
-
-    if (node == NULL) {
-        DEBUG_PRINT("elem is not in the tree\n");
-        return;
-    }
-    p_node_info("found node", node);
-
-    int8_t node_is_root;
-    (node == tree->root) ? (node_is_root = 1) : (node_is_root = 0);
-
-    print_2D(tree, "pre removal");
-
-    /* replace node with its successor */
-    treenode_t *succ = node_replace(tree, node);
-
-    p_node_relation(node, "successor", succ);
-
-    /* if tree is empty, don't try to balance it */
-    if (tree->size == 0) {
-        DEBUG_PRINT("tree is now empty\n");
-        return;
-    }
-
-    print_2D(tree, "post removal, pre balancing:");
-
+static int8_t verify_successor(tree_t *tree, treenode_t *node, treenode_t *succ) {
     int8_t tests_ok = 1;
+
     /* verify successors' parent relation */
     if (node == tree->root) {
         if (succ != tree->root) {
@@ -611,45 +592,80 @@ void info_tree_remove(tree_t *tree, void *elem) {
             tests_ok = 0;
         }
     }
-
     if ((succ->parent->left != succ) && (succ->parent->right != succ)) {
         p_node_info("succ->parent", succ->parent);
         DEBUG_PRINT("ERR: succesor parent is not correctly updated\n");
         tests_ok = 0;
     }
-
     if ((node->parent->left != succ) && (node->parent->right != succ)) {
         p_node_info("succ->parent", succ->parent);
         DEBUG_PRINT("ERR: succesor parent is not correctly updated\n");
         tests_ok = 0;
     }
-
     /* verify succesful adoption of children */
     if ((succ->left != tree->NIL) && (succ->left->parent != succ)) {
         p_node_info("succ->left->parent", succ->left->parent);
         DEBUG_PRINT("ERR: parent link broken\n");
         tests_ok = 0;
     }
-
     if ((succ->right != tree->NIL) && (succ->right->parent != succ)) {
         p_node_info("succ->right->parent", succ->right->parent);
         DEBUG_PRINT("ERR: parent link broken\n");
         tests_ok = 0;
     }
 
-    if (!tests_ok) {
-        p_node_info("removed node", node);
-        p_node_info("successor", node);
-        ERROR_PRINT("node_replace tests failed. Details above\n");
-    } else {
-        DEBUG_PRINT("node_replace OK. Initializing balancing\n");
+    return tests_ok;
+}
+
+void info_tree_remove(tree_t *tree, void *elem) {
+    printf("\nattempting to find node with elem '%d'\n", *(int*)elem);
+    treenode_t *node = node_contains(tree, elem);
+
+    if (node == NULL) {
+        DEBUG_PRINT("elem is not in the tree\n");
+        return;
     }
 
-    /* balancing / recoloring */
-    // succ->black = node->black;
-    info_post_remove_balance(tree, succ);
-    /* free the node with the item */
+    print_2D(tree, "pre removal");
 
+    /* replace node with its successor */
+    treenode_t *succ = node_replace(tree, node);
+
+    /* if tree is empty, don't try to balance it */
+    if (tree->size == 0) {
+        DEBUG_PRINT("tree is now empty\n");
+        if (tree->root != tree->NIL) {
+            ERROR_PRINT("empty tree should have NIL as root\n");
+        }
+        return;
+    }
+
+    print_2D(tree, "post removal, pre balancing:");
+
+    if (!(verify_successor(tree, node, succ))) {
+        p_node_info("removed node", node);
+        p_node_info("successor", node);
+        ERROR_PRINT("verify_successor tests failed. Details above\n");
+    } else {
+        DEBUG_PRINT("verify_successor OK. Initializing balancing\n");
+    }
+
+    /* if node or succ is red:
+     * color succ red
+     * color succ's children black
+    */
+    if (succ == tree->root) {
+        succ->black = 1;
+    } else if (!node->black || !succ->black) {
+        succ->black = 0;
+        succ->left->black = 1;
+        succ->right->black = 1;
+        if (!succ->parent->black) {
+            info_post_remove_balance(tree, succ->parent);
+        }
+    } else {
+        info_post_remove_balance(tree, succ);
+    }
     print_2D(tree, "post removal & balancing:");
     free(node);
 }
@@ -774,7 +790,6 @@ static void debug_iterate_partial(tree_iter_t *iter) {
     debug_print_pass("iterator works like expected\n");
 }
 
-// calls debug_xxxx functions
 int main() {
     if (LEN % 2 == 1) ERROR_PRINT("use an even number.\n");
 
