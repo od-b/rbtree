@@ -141,18 +141,22 @@ int8_t tree_contains(tree_t *tree, void *elem) {
 /* 
  * Iterative node adding
  * This approach is a bit ugly/spacious, but does not allocate any
- * memory before figuring out whether or not the element is a duplicate
+ * memory until we're certain elem is to be added
+ * returns:
+ * a) the added node if it was succesfully added
+ * b) NULL if malloc failed
+ * c) tree->NIL if element already exists (not adding duplicate)
  */
 static treenode_t *node_add(tree_t *tree, void *elem) {
+    treenode_t *NIL = tree->NIL;
     treenode_t *curr = tree->root;
-    treenode_t *new_node = NULL;
     int8_t direction;
 
     /* traverse until a NIL-node, or node with equal element is found */
     while ((direction = tree->cmpfunc(elem, curr->elem)) != 0) {
         if (direction > 0) {
-            if (curr->right == tree->NIL) {
-                new_node = malloc(sizeof(treenode_t));
+            if (curr->right == NIL) {
+                treenode_t *new_node = malloc(sizeof(treenode_t));
                 if (new_node != NULL) {
                     new_node->parent = curr;
                     curr->right = new_node;
@@ -163,9 +167,9 @@ static treenode_t *node_add(tree_t *tree, void *elem) {
             curr = curr->right;
         } else {
             // ... direction < 0
-            if (curr->left == tree->NIL) {
+            if (curr->left == NIL) {
                 // same as above, but curr->left
-                new_node = malloc(sizeof(treenode_t));
+                treenode_t *new_node = malloc(sizeof(treenode_t));
                 if (new_node != NULL) {
                     new_node->parent = curr;
                     curr->left = new_node;
@@ -176,16 +180,17 @@ static treenode_t *node_add(tree_t *tree, void *elem) {
             curr = curr->left;
         }
     }
-    // tree has an item with the same value, don't add it
+    // cmpfunc == 0, don't add the elem
     return tree->NIL;
 }
 
+/* balance the tree after adding a node */
 static void post_add_balance(tree_t *T, treenode_t *added_node) {
     int8_t curr_is_leftchild, par_is_leftchild;
     treenode_t *curr, *par, *unc, *gp;
     curr = added_node;
 
-    while (!(curr->parent->black)) {
+    while (!curr->parent->black) {
         par = curr->parent;
         gp = par->parent;
 
@@ -193,7 +198,7 @@ static void post_add_balance(tree_t *T, treenode_t *added_node) {
         (gp->left == par) ? (unc = gp->right) : (unc = gp->left);
 
         // if uncle is red
-        if (!(unc->black)) {
+        if (!unc->black) {
             par->black = 1;
             unc->black = 1;
             if (gp != T->root) gp->black = 0;
@@ -223,27 +228,27 @@ static void post_add_balance(tree_t *T, treenode_t *added_node) {
     }
 }
 
-void tree_add(tree_t *T, void *elem) {
+void tree_add(tree_t *tree, void *elem) {
     /* case: tree does not have a root yet */
-    if (T->size == 0) {
+    if (tree->size == 0) {
         treenode_t *root = malloc(sizeof(treenode_t));
         if (root == NULL) {
             printf("out of memory\n");
             return;
         }
         root->elem = elem;
-        root->left = T->NIL;
-        root->right = T->NIL;
-        root->parent = T->NIL;
+        root->left = tree->NIL;
+        root->right = tree->NIL;
+        root->parent = tree->NIL;
         root->black = 1;
-        T->root = root;
-        T->size = 1;
+        tree->root = root;
+        tree->size = 1;
         return;
     }
 
     /* add elem to the tree */
-    treenode_t *new_node = node_add(T, elem);
-    if (new_node == T->NIL) {
+    treenode_t *new_node = node_add(tree, elem);
+    if (new_node == tree->NIL) {
         /* avoid adding duplicate */
         return;
     }
@@ -254,17 +259,17 @@ void tree_add(tree_t *T, void *elem) {
     }
 
     /* ... else, the elem was added, increment tree size */
-    T->size++;
+    tree->size++;
 
     /* assign the default values for new nodes */
     new_node->elem = elem;
-    new_node->left = T->NIL;
-    new_node->right = T->NIL;
+    new_node->left = tree->NIL;
+    new_node->right = tree->NIL;
     new_node->black = 0;
 
     /* if needed, call for balancing */
     if (!new_node->parent->black) {
-        post_add_balance(T, new_node);
+        post_add_balance(tree, new_node);
     }
 }
 
