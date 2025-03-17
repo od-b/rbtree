@@ -1,20 +1,23 @@
-TREE_SRC = src/tree_test.c
-INCLUDE = include compare.c tree_redblack.c
-INCLUDE := $(patsubst %.c,src/%.c, $(INCLUDE))
+override CFLAGS = -Og -g -Wall -Wextra -Wno-unused 
+# override CFLAGS += -O2 -Wall -Wno-unused
 
-# normal/debug flags
-CFLAGS_W = -Wall -Wextra -g -Wpedantic
-LDFLAGS_W = -DLOG_LEVEL=0 -DERROR_FATAL
+TREE = rbtree
+TEST = rbtreetest
 
-# optimization flags
-CFLAGS_O = -O3
-LDFLAGS_O = -DLOG_LEVEL=4
+TEST_SRC = tests/$(TEST).c
+TREE_SRC = src/$(TREE).c
+TREE_HEADER = src/$(TREE).h
 
-all: tree
+all: runtest
 
-tree: $(TREE_SRC) Makefile
-	gcc -o $@ $(CFLAGS_W) $(TREE_SRC) -I$(INCLUDE) ${LDFLAGS_W}
+$(TREE): $(TREE_SRC) $(TREE_HEADER) Makefile
+	gcc -o $@ $(TREE_SRC) $(CFLAGS) -I $(TREE_HEADER)
+
+$(TEST): $(TEST_SRC) $(TREE_SRC) $(TREE_HEADER) Makefile
+	gcc -o $@ $(TEST_SRC) $(CFLAGS) -I $(TREE_HEADER) $(TREE_SRC)
+
+runtest: $(TEST)
+	./$(TEST)
 
 clean:
-	rm -f *~ *.o *.exe *.app tree
-	rm -r *.dSYM/
+	rm -rf *~ *.o *.dSYM $(TREE) $(TEST)
