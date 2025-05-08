@@ -1,1 +1,1 @@
-# Implementation of red-black binary search tree
+Implementation of red-black binary search tree
